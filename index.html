@@ -37,7 +37,8 @@
 
 <p>Plug this <a href="http://api.rubyonrails.org/classes/Rails/Railtie.html">Railtie</a>
 into your Rails 3 app (ruby1.9 only), and you&#8217;ll be ready to package your
-Rails app as a DEB package. RPM support could be added in the short future.</p>
+Rails app as a DEB package. RPM support could/will be added in the short
+future.</p>
 
 <p>This gem originates from hours spent trying to figure out how to package a
 Ruby app for CentOS, and then Debian. It&#8217;s definitely not trivial, because
@@ -84,31 +85,95 @@ Ruby1.9 (+rubygems).</p>
 
 <h2 id="what">What?</h2>
 
-<p>This gem will allow you to package your Rails3 application, create an <code>init.d</code>
-script for you, install a binary file to start your app/rake tasks/console,
-put your configuration files in <code>/etc/app-name/</code>, setup a proper logrotate
-file so that your log files don&#8217;t eat all the disk space of your server, and a
-few other things.</p>
+<p>This gem will allow you to package your Rails3 application as a <code>.deb</code> package, and sets up a few things for you:</p>
 
-<p>The default target installation directory for the other app files will be
+<ul>
+<li><p>an <code>init.d</code> script to easily start/stop/restart your app, and make it load when the server boots;</p></li>
+<li><p>an executable to manually start the server, your rake tasks, or access the console;</p></li>
+<li><p>your configuration files will be available in <code>/etc/app-name/*.yml</code>;</p></li>
+<li><p>defaults for your app (host, port, etc.) can be setup in <code>/etc/default/app-name</code>;</p></li>
+<li><p>a proper <code>logrotate</code> file will be created for you, so that your log files
+don&#8217;t eat all the disk space of your server;</p></li>
+<li><p>and a few other things.</p></li>
+</ul>
+
+<p>The default target installation directory for all the other app files will be
 <code>/opt/local/app-name</code>. This can be configured.</p>
 
 <h2 id="requirements">Requirements</h2>
 
 <ul>
 <li><p>You must use Rails3+ and ruby1.9+ in your application. This may work with
-other rubies but then you&#8217;ll need to add a rubygems dependency.</p></li>
+other rubies but then you&#8217;ll need to add adapt the dependencies.</p></li>
 <li><p>Your Rails application must be able to run with the
 <a href="http://code.macournoyer.com/thin/"><code>thin</code></a> web server. Don&#8217;t forget to add
 <code>thin</code> to your Gemfile!</p></li>
+<li><p>Your Rails application must have a <code>config.ru</code> file.</p></li>
 <li><p>Your application must be checked into a <strong>Git</strong> repository. Your name and
 email is taken from the git configuration, and the changelog is populated
 based on the git log between two versions.</p></li>
 </ul>
 
-<h2 id="getting_started">Getting started</h2>
+<h2 id="getting_started_quickly">Getting started (quickly)</h2>
 
-<p>Or, how to build a debian package of your Rails app in 5 minutes.</p>
+<p>Aka, how to build a debian package out of your Rails app in 5 minutes. This
+assumes that you have a VM or server running Debian Squeeze readily available
+for building the package.</p>
+
+<p>Install <code>pkgr</code>:</p>
+
+<pre><code>$ gem install pkgr
+</code></pre>
+
+<p>Create a new Rails app:</p>
+
+<pre><code>$ rails new my-app
+      create  
+      create  README.rdoc
+      create  Rakefile
+      ...
+      create  vendor/plugins
+      create  vendor/plugins/.gitkeep
+</code></pre>
+
+<p>Initialize the git repository (if not already done):</p>
+
+<pre><code>$ cd my-app
+$ git init
+$ git add .
+$ git commit -m "First commit"
+</code></pre>
+
+<p>Package (this will create a new branch prefixed with <code>pkgr-</code>. You can delete
+it afterwards):</p>
+
+<pre><code>$ pkgr --uri . --bump 0.1.0 --host debian-build-machine
+...
+my-app_0.1.0-1_amd64.deb                                                                     100% 6080KB   5.9MB/s   00:01
+</code></pre>
+
+<p>Your .deb package is in <code>pkg/my-app_0.1.0-1_amd64.deb</code>. Install it on your production server:</p>
+
+<pre><code>$ scp pkg/my-app_0.1.0-1_amd64.deb production-machine:/tmp/
+$ ssh production-machine 'sudo dpkg -i /tmp/my-app_0.1.0-1_amd64.deb || sudo apt-get -f -y install'
+</code></pre>
+
+<p>The app should now be up and running on <code>0.0.0.0:8000</code>. You might want to change this in the <code>/etc/default/my-app</code> file on the server.</p>
+
+<pre><code>$ ssh production-machine 'curl -is localhost:8000'
+</code></pre>
+
+<p>You should get a 404. This is expected since this app does nothing. You can
+now build your app and update the <code>config/pkgr.yml</code> file when you have system
+dependencies to add.</p>
+
+<p>Enjoy, and you may want to read the step-by-step guide to learn more about
+what&#8217;s going on.</p>
+
+<h2 id="getting_started_step_by_step">Getting started (step by step)</h2>
+
+<p><code>pkgr</code> can be used as a command-line tool (fully automatic), or through the
+rake tasks it installs when you require it in your Gemfile. Below is how you would use the rake tasks to accomplish the same thing as before.</p>
 
 <h3 id="setup">Setup</h3>
 
@@ -126,7 +191,7 @@ based on the git log between two versions.</p></li>
 <p>Go into your app directory, and add <code>pkgr</code> to your Gemfile:</p>
 
 <pre><code>$ cd my-app
-$ echo "gem 'pkgr', :group =&gt; :development" &gt;&gt; Gemfile
+$ echo "gem 'pkgr'" &gt;&gt; Gemfile
 </code></pre>
 
 <p>For now, this packaging tool only supports <code>thin</code> (would be easy to add others, though), so add it to your Gemfile:</p>
@@ -353,25 +418,11 @@ unauthenticated packages:</p>
 <pre><code>production-server # echo 'APT::Get::AllowUnauthenticated "true";' &gt;&gt; /etc/apt/apt.conf.d/allow-unauthenticated
 </code></pre>
 
-<p>Easy.</p>
-
-<h2 id="notes_of_interest">Notes of interest</h2>
-
-<ul>
-<li><p>your configuration files will be stored in <code>/etc/my-app/*.yml</code>, making it easy to manage with Puppet or manually (don&#8217;t forget to <code>/etc/init.d/my-app restart</code> after making changes).</p></li>
-<li><p>you can change how the Thin server is launched by adding options to the <code>/etc/default/my-app</code> file.</p></li>
-<li><p>your log files will be stored in <code>/var/log/my-app/</code>.</p></li>
-<li><p>your db files will be stored in <code>var/db/my-app/</code>.</p></li>
-<li><p>if you&#8217;ve got migrations to run, just do a <code>my-app rake db:migrate</code> (we might want to run them automatically as part of the postinstall process).</p></li>
-<li><p>you can launch a console using <code>my-app console</code>.</p></li>
-<li><p>use the initd script to start and stop the app: <code>/etc/init.d/my-app [start|stop|status]</code>.</p></li>
-</ul>
-
 <h2 id="general_usage">General usage</h2>
 
-<p>Declare <code>pkgr</code> as one of your <strong>development</strong> dependencies in your <code>Gemfile</code>:</p>
+<p>Declare <code>pkgr</code> as one of your dependencies in your <code>Gemfile</code>:</p>
 
-<pre><code>gem 'pkgr', :group =&gt; :development
+<pre><code>gem 'pkgr'
 </code></pre>
 
 <p>Also add <code>thin</code>:</p>
@@ -436,25 +487,83 @@ app. Next step is probably to upload it to a local apt repository, and then
 a simple <code>apt-get install my-app</code> will install everything. Enjoy!</p></li>
 </ul>
 
+<h2 id="cli_usage">CLI usage</h2>
+
+<p>Starting from version 0.3.0, pkgr now comes with an executable, which allows
+to package any app stored in a git repository with one command.</p>
+
+<p>For instance, here is how you would package the <a href="http://www.redmine.org/">Redmine</a> app:</p>
+
+<pre><code>$ cd /tmp
+$ pkgr --uri https://github.com/edavis10/redmine --ref master --bump 1.4.1 \
+  -c https://raw.github.com/crohr/pkgr/master/examples/redmine/configuration.yml \
+  -c https://raw.github.com/crohr/pkgr/master/examples/redmine/database.yml \
+  -c https://raw.github.com/crohr/pkgr/master/examples/redmine/pkgr.yml \
+  --host debian-build
+</code></pre>
+
+<p>You .deb package will be available in <code>/tmp/redmine/pkg/</code>. In this example,
+the given <code>pkgr.yml</code> configuration file automatically adds a dependency on
+<code>mysql-server</code>, which means that when you install the generated redmine
+package, it will be ready to be accessed on <code>0.0.0.0:8000</code>.</p>
+
+<p>Note that for simple projects, you may not need to specify all those
+configuration files on the command line. Redmine is a complex app.</p>
+
+<p>See <code>pkgr -h</code> for the list of options available:</p>
+
+<pre><code>$ pkgr -h
+* Description
+  pkgr 0.2.0 - Package Rails apps effortlessly.
+* Usage
+  pkgr --uri GIT_REPOSITORY --config database.yml:http://path/to/database.yml --config ...
+
+* Common options
+        --uri=                       Sets the Git repository URI (FILE, HTTP, SSH, GIT, etc.) [required]
+    -c, --config=                    Download a configuration file into the config/ folder of the app (HTTP or FILE URIs)
+    -b, --bump=                      Sets the app version [required]
+    -n, --name=                      Sets the app name [optional]
+        --ref=                       Sets the git reference to checkout [default=master]
+        --host=                      Sets the build machine hostname. If none, the process will stop just before building the package.
+
+* Other
+    -h, --help                       Show this message
+        --version                    Show version
+</code></pre>
+
+<h2 id="notes_of_interest">Notes of interest</h2>
+
+<ul>
+<li><p>your configuration files will be stored in <code>/etc/my-app/*.yml</code>, making it easy to manage with Puppet or manually (don&#8217;t forget to <code>/etc/init.d/my-app restart</code> after making changes).</p></li>
+<li><p>you can change how the Thin server is launched by adding options to the <code>/etc/default/my-app</code> file.</p></li>
+<li><p>your log files will be stored in <code>/var/log/my-app/</code>.</p></li>
+<li><p>your db files will be stored in <code>var/db/my-app/</code>.</p></li>
+<li><p>if you&#8217;ve got migrations to run, just do a <code>my-app rake db:migrate</code> (we might want to run them automatically as part of the postinstall process).</p></li>
+<li><p>you can launch a console using <code>my-app console</code>.</p></li>
+<li><p>use the initd script to start and stop the app: <code>/etc/init.d/my-app [start|stop|restart|status]</code>.</p></li>
+</ul>
+
 <h2 id="todo">Todo</h2>
 
 <ul>
 <li><p>Speed up the packaging process (currently, bundler re-downloads all the gems
 each time you package an app).</p></li>
 <li><p>Include tasks for building RPMs.</p></li>
-<li><p>Better debian initd script.</p></li>
+<li><p>The included initd script sucks. Improve it.</p></li>
+<li><p>Populate system dependencies based on gems declared in the Gemfile.</p></li>
 <li><p>Some tests.</p></li>
 </ul>
 
 <h2 id="authors">Authors</h2>
 
 <ul>
-<li>Cyril Rohr <a href="&#109;&#x61;&#x69;&#x6C;&#x74;&#x6F;:&#99;&#121;&#x72;&#105;&#108;.&#114;&#111;&#104;&#114;&#64;&#x67;&#x6D;&#x61;&#105;&#108;&#x2E;&#x63;&#111;&#x6D;">&#99;&#121;&#x72;&#105;&#108;.&#114;&#111;&#104;&#114;&#64;&#x67;&#x6D;&#x61;&#105;&#108;&#x2E;&#x63;&#111;&#x6D;</a> - <a href="http://crohr.me">http://crohr.me</a></li>
+<li>Cyril Rohr <a href="&#109;&#97;&#x69;&#x6C;&#x74;&#111;:&#x63;&#x79;&#114;&#105;l&#46;&#114;o&#104;&#114;&#64;&#103;&#109;&#97;&#105;&#108;&#x2E;&#99;&#111;&#109;">&#x63;&#x79;&#114;&#105;l&#46;&#114;o&#104;&#114;&#64;&#103;&#109;&#97;&#105;&#108;&#x2E;&#99;&#111;&#109;</a> - <a href="http://crohr.me">http://crohr.me</a></li>
 </ul>
 
 <h2 id="copyright">Copyright</h2>
 
 <p>See LICENSE (MIT)</p>
+
 
       </section>
     </div>
