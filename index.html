@@ -35,533 +35,83 @@
 <h1 id="pkgr">pkgr <a href="https://twitter.com/share" class="twitter-share-button" data-via="crohr">Tweet</a>
 <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script></h1>
 
-<p>Plug this <a href="http://api.rubyonrails.org/classes/Rails/Railtie.html">Railtie</a>
-into your Rails 3 app (ruby1.9 only), and you&#8217;ll be ready to package your
-Rails app as a DEB package. RPM support could/will be added in the short
-future.</p>
+<h2 id="goal">Goal</h2>
+<p>Make debian packages out of any app that can run on Heroku.</p>
+<h2 id="examples">Examples</h2>
+<ul>
+<li>Gitlab package for debian wheezy: <a href="http://deb.pkgr.io/crohr/gitlabhq/"><code class="url">http://deb.pkgr.io/crohr/gitlabhq/</code></a>.</li>
+</ul>
+<h2 id="installation">Installation</h2>
+<p>Note: the new version of pkgr using buildpacks is only available as a pre-release.</p>
+<p>Install <code>pkgr</code> on a Debian/Ubuntu machine (only <code>wheezy</code> flavour for now):</p>
+<pre><code>sudo apt-get install ruby1.9.1-full
+sudo gem install pkgr --version &quot;1.0.1.pre&quot;</code></pre>
+<h2 id="usage">Usage</h2>
+<p>To package your app, you can either execute <code>pkgr</code> locally if your app repository is on the same machine:</p>
+<pre><code>pkgr path/to/app/repo</code></pre>
+<p>Or, assuming your build machine is accessible via SSH by doing <code>ssh pkgr-build-machine</code> (set this in your <code>~/.ssh/config</code> file), you can do as follows:</p>
+<pre><code>pkgr path/to/app/repo --host pkgr-build-machine</code></pre>
+<p>The resulting .deb package will be in your current working directory.</p>
+<p>Full command line options are given below:</p>
+<pre><code>$ pkgr help package
+Usage:
+  pkgr package TARBALL
 
-<p>This gem originates from hours spent trying to figure out how to package a
-Ruby app for CentOS, and then Debian. It&#8217;s definitely not trivial, because
-there are so many pieces to put together before getting something working.
-Hopefully this will save time for everyone :)</p>
-
-<p>Fair warning: there are probably a few things that could be done better, or in
-a more standard way. Feel free to open an issue and/or a pull-request.</p>
-
+Options:
+  [--target=TARGET]                        # Target package to build (only &#39;deb&#39; supported for now)
+                                           # Default: deb
+  [--changelog=CHANGELOG]                  # Changelog
+  [--architecture=ARCHITECTURE]            # Target architecture for the package
+                                           # Default: x86_64
+  [--homepage=HOMEPAGE]                    # Project homepage
+  [--description=DESCRIPTION]              # Project description
+  [--version=VERSION]                      # Package version (if git directory given, it will use the latest git tag available)
+  [--iteration=ITERATION]                  # Package iteration (you should keep the default here)
+                                           # Default: 20131007132226
+  [--user=USER]                            # User to run the app under (defaults to your app name)
+  [--group=GROUP]                          # Group to run the app under (defaults to your app name)
+  [--compile-cache-dir=COMPILE_CACHE_DIR]  # Where to store the files cached between packaging runs
+  [--dependencies=one two three]           # Specific system dependencies that you want to install with the package
+  [--build-dependencies=one two three]     # Specific system dependencies that must be present before building
+  [--before-precompile=BEFORE_PRECOMPILE]  # Provide a script to run just before the buildpack compilation
+  [--host=HOST]                            # Remote host to build on (default: local machine)
+  [--auto]                                 # Automatically attempt to install missing dependencies
+  [--verbose]                              # Run verbosely
+  [--debug]                                # Run very verbosely
+  [--name=NAME]                            # Application name (if directory given, it will default to the directory name)</code></pre>
 <h2 id="why">Why?</h2>
-
-<p><a href="http://capify.org/">Capistrano</a> is great for deploying Rails/Ruby
-applications, but the deployment recipe can quickly become a mess, and scaling
-the deployment to more than a few servers can prove to be difficult. Plus, if
-you&#8217;re already using automation tools such as
-<a href="http://www.puppetlabs.com/">Puppet</a> to configure your servers, you have to
-run two different processes to configure your infrastructure.</p>
-
-<p>Another issue with Capistrano is that the hook system is not that powerful.
-Compare that with the pre/post-install/upgrade/uninstall steps that you can
-define in a RPM or DEB package, and you&#8217;ll quickly see the advantage of
-letting a robust package manager such as <code>apt</code> or <code>yum</code> handle all those
-things for you in a reliable manner.</p>
-
-<p>Last thing, once you built your RPM or DEB package and you tested that it
-works once, you can deploy it on any number of servers at any time and you&#8217;re
-sure that it will install the required package dependencies, run the hooks,
-and put the files in the directories you specified, creating them as needed.
-Then, you can downgrade or uninstall the whole application in one command.</p>
-
-<h2 id="how">How?</h2>
-
-<p>The issue with Ruby applications is that most of the gems are not (yet)
-packaged in the various Linux distributions. And even if they were, installing
-multiple Ruby applications that need two different versions of the same Ruby
-library would be impossible, since you can&#8217;t install two different (minor)
-versions of a library with the package managers.</p>
-
-<p>So, how are we going to easily package Ruby applications and avoid dependency
-issues? Well, I know package maintainers will scream at me, but we&#8217;ll just
-vendor the required gems in the package we&#8217;ll build, and use bundler to manage
-those dependencies. Thus, the only dependency we&#8217;ll put in our package will be
-Ruby1.9 (+rubygems).</p>
-
-<h2 id="what">What?</h2>
-
-<p>This gem will allow you to package your Rails3 application as a <code>.deb</code> package, and sets up a few things for you:</p>
-
+<p>Tools such as <a href="http://capify.org/">Capistrano</a> are great for deploying applications, but the deployment recipe can quickly become a mess, and scaling the deployment to more than a few servers can prove to be difficult. Plus, if you're already using automation tools such as <a href="http://www.puppetlabs.com/">Puppet</a> to configure your servers, you have to run two different processes to configure your infrastructure.</p>
+<p><code>pkgr</code> builds on top of the Heroku tools to provide you with an easy way to package you app as a debian package. The great advantage is that once you've built it and you tested that it works once, you can deploy on any number of servers at any time and you're sure that it will just work. Then, you can upgrade/downgrade or uninstall the whole application in one command.</p>
+<p>Finally, it's a great way to share your open source software with your users and clients. Much easier than asking them to install all the dependencies manually! I'm in the process of making sure <code>pkgr</code> is feature complete by trying to package as many successful open-source projects as I can. Don't hesitate to test it on your app and report your findings!</p>
+<h2 id="what-this-does">What this does</h2>
 <ul>
-<li><p>an <code>init.d</code> script to easily start/stop/restart your app, and make it load when the server boots;</p></li>
-<li><p>an executable to manually start the server, your rake tasks, or access the console;</p></li>
-<li><p>your configuration files will be available in <code>/etc/app-name/*.yml</code>;</p></li>
-<li><p>defaults for your app (host, port, etc.) can be setup in <code>/etc/default/app-name</code>;</p></li>
-<li><p>a proper <code>logrotate</code> file will be created for you, so that your log files
-don&#8217;t eat all the disk space of your server;</p></li>
-<li><p>and a few other things.</p></li>
+<li><p>Uses Heroku buildpacks to embed all your dependencies within the debian package. That way, no need to mess with stale system dependencies, and no need to install anything by hand. Also, we get for free all the hard work done by Heroku developers to make sure your app runs fine in an isolated way.</p></li>
+<li><p>Gives you a nice executable, which closely replicates the Heroku toolbelt utility. For instance, assuming you're packaging an app called <code>my-app</code>, you can do the following:</p>
+<pre><code>my-app config:set VAR=value
+my-app config:get VAR
+my-app run [procfile process] # e.g. my-app run rake db:migrate, my-app run console, etc.
+my-app scale web=1 worker=1
+...</code></pre></li>
+<li><p>You app will reside in <code>/opt/app-name</code>.</p></li>
+<li><p>You'll also get a upstart based initialization script that you can use directly.</p></li>
+<li><p>Logs will be stored in <code>/var/log/app-name/</code>, with a proper logrotate config automatically added.</p></li>
+<li><p>Config files can be added in <code>/etc/app-name/</code></p></li>
 </ul>
-
-<p>The default target installation directory for all the other app files will be
-<code>/opt/local/app-name</code>. This can be configured.</p>
-
 <h2 id="requirements">Requirements</h2>
-
 <ul>
-<li><p>You must use Rails3+ and ruby1.9+ in your application. This may work with
-other rubies but then you&#8217;ll need to add adapt the dependencies.</p></li>
-<li><p>Your Rails application must be able to run with the
-<a href="http://code.macournoyer.com/thin/"><code>thin</code></a> web server. Don&#8217;t forget to add
-<code>thin</code> to your Gemfile!</p></li>
-<li><p>Your Rails application must have a <code>config.ru</code> file.</p></li>
-<li><p>Your application must be checked into a <strong>Git</strong> repository. Your name and
-email is taken from the git configuration, and the changelog is populated
-based on the git log between two versions.</p></li>
+<li><p>You must have a Procfile.</p></li>
+<li><p>Your application must be Heroku compatible, meaning you should be able to set your main app's configuration via environment variables.</p></li>
 </ul>
-
-<h2 id="getting_started_quickly">Getting started (quickly)</h2>
-
-<p>Aka, how to build a debian package out of your Rails app in 5 minutes. This
-assumes that you have a VM or server running Debian Squeeze readily available
-for building the package.</p>
-
-<p>Install <code>pkgr</code>:</p>
-
-<pre><code>$ gem install pkgr
-</code></pre>
-
-<p>Create a new Rails app:</p>
-
-<pre><code>$ rails new my-app
-      create  
-      create  README.rdoc
-      create  Rakefile
-      ...
-      create  vendor/plugins
-      create  vendor/plugins/.gitkeep
-</code></pre>
-
-<p>Initialize the git repository (if not already done):</p>
-
-<pre><code>$ cd my-app
-$ git init
-$ git add .
-$ git commit -m "First commit"
-</code></pre>
-
-<p>Package (this will create a new branch prefixed with <code>pkgr-</code>. You can delete
-it afterwards):</p>
-
-<pre><code>$ pkgr --uri . --bump 0.1.0 --host debian-build-machine
-...
-my-app_0.1.0-1_amd64.deb                                                                     100% 6080KB   5.9MB/s   00:01
-</code></pre>
-
-<p>Your .deb package is in <code>pkg/my-app_0.1.0-1_amd64.deb</code>. Install it on your production server:</p>
-
-<pre><code>$ scp pkg/my-app_0.1.0-1_amd64.deb production-machine:/tmp/
-$ ssh production-machine 'sudo dpkg -i /tmp/my-app_0.1.0-1_amd64.deb || sudo apt-get -f -y install'
-</code></pre>
-
-<p>The app should now be up and running on <code>0.0.0.0:8000</code>. You might want to change this in the <code>/etc/default/my-app</code> file on the server.</p>
-
-<pre><code>$ ssh production-machine 'curl -is localhost:8000'
-</code></pre>
-
-<p>You should get a 404. This is expected since this app does nothing. You can
-now build your app and update the <code>config/pkgr.yml</code> file when you have system
-dependencies to add.</p>
-
-<p>Enjoy, and you may want to read the step-by-step guide to learn more about
-what&#8217;s going on.</p>
-
-<h2 id="getting_started_step_by_step">Getting started (step by step)</h2>
-
-<p><code>pkgr</code> can be used as a command-line tool (fully automatic), or through the
-rake tasks it installs when you require it in your Gemfile. Below is how you would use the rake tasks to accomplish the same thing as before.</p>
-
-<h3 id="setup">Setup</h3>
-
-<p>Create a new Rails app:</p>
-
-<pre><code>$ rails new my-app --skip-bundle
-      create  
-      create  README.rdoc
-      create  Rakefile
-      ...
-      create  vendor/plugins
-      create  vendor/plugins/.gitkeep
-</code></pre>
-
-<p>Go into your app directory, and add <code>pkgr</code> to your Gemfile:</p>
-
-<pre><code>$ cd my-app
-$ echo "gem 'pkgr'" &gt;&gt; Gemfile
-</code></pre>
-
-<p>For now, this packaging tool only supports <code>thin</code> (would be easy to add others, though), so add it to your Gemfile:</p>
-
-<pre><code>$ echo "gem 'thin'" &gt;&gt; Gemfile
-</code></pre>
-
-<p>Install the gems:</p>
-
-<pre><code>$ bundle install
-</code></pre>
-
-<p>If it&#8217;s not already done, initialize a git repository and create a first commit:</p>
-
-<pre><code>$ git init
-$ git add .
-$ git commit -m "First commit"
-</code></pre>
-
-<p>Setup <code>pkgr</code>:</p>
-
-<pre><code>$ rake pkgr:setup
-Setting up configuration file...
-...
-Edit '/Users/crohr/tmp/my-app/config/pkgr.yml' and fill in the required information, then enter 'rake pkgr:generate' to generate the debian files.
-</code></pre>
-
-<p>As outlined, edit <code>config/pkgr.yml</code> and fill in your app name. In our example I&#8217;ll fill in <code>my-app</code> as the app name. Also, you should edit the runtime and build dependencies (though the default ones should be fine with a base Rails app).</p>
-
-<p>An example <code>pkgr.yml</code> file is given below:</p>
-
-<pre><code>---
-version: 0.4.0
-name: my-app
-description: This is a description
-git_ref: HEAD
-config_files:
-- pkgr.yml
-- database.yml
-architecture: amd64
-debian_runtime_dependencies:
-- ${shlibs:Depends}
-- ${misc:Depends}
-- ruby1.9.1-full
-- git-core
-- libxml2
-- libxslt1.1
-debian_build_dependencies:
-- debhelper (&gt;= 7)
-- dpkg-dev
-- libmysqlclient15-dev
-- libxml2-dev
-- libxslt-dev
-- libsqlite3-dev
-</code></pre>
-
-<h3 id="generate_the_packaging_files">Generate the packaging files</h3>
-
-<p>Now generate the required files for packaging:</p>
-
-<pre><code>$ rake pkgr:generate
-mkdir -p /Users/crohr/tmp/my-app/debian
-cp /Users/crohr/.rvm/gems/ruby-1.9.3-p125/gems/pkgr-0.1.0/lib/pkgr/data/debian/changelog /Users/crohr/tmp/my-app/debian/changelog
-cp /Users/crohr/.rvm/gems/ruby-1.9.3-p125/gems/pkgr-0.1.0/lib/pkgr/data/debian/cron.d /Users/crohr/tmp/my-app/debian/cron.d
-Correctly set up debian files.
-mkdir -p /Users/crohr/tmp/my-app/bin
-cp /Users/crohr/.rvm/gems/ruby-1.9.3-p125/gems/pkgr-0.1.0/lib/pkgr/data/bin/executable /Users/crohr/tmp/my-app/bin/my-app
-chmod 755 /Users/crohr/tmp/my-app/bin/my-app
-Correctly set up executable file. Try running './bin/my-app console'.
-</code></pre>
-
-<p>This will have created the required <code>debian/</code> files, plus an executable for your app, so that you&#8217;re able to do the following:</p>
-
-<pre><code>$ ./bin/my-app console development
-$ ./bin/my-app server start -e development
-$ ./bin/my-app rake some_task
-</code></pre>
-
-<p>This is especially useful when the app is deployed on a server, since the executable will be added to the path!</p>
-
-<p>By default, you should not have to change anything in the <code>debian/</code> folder, so let&#8217;s package our app. </p>
-
-<h3 id="package_the_app">Package the app</h3>
-
-<p>First, make sure you committed all your changes:</p>
-
-<pre><code>$ git add .
-$ git commit -m "..."
-</code></pre>
-
-<p>Then increase the version number:</p>
-
-<pre><code>$ rake pkgr:bump:minor
-Committing changelog and version file...
-git add debian/changelog /Users/crohr/tmp/my-app/config/pkgr.yml &amp;&amp; git commit -m 'v0.1.0' debian/changelog /Users/crohr/tmp/my-app/config/pkgr.yml
-[master c05dd73] v0.1.0
- 2 files changed, 29 insertions(+), 31 deletions(-)
- rewrite config/pkgr.yml (82%)
- create mode 100755 debian/changelog
-</code></pre>
-
-<p>Make sure you do not have any staged change (otherwise, commit them):</p>
-
-<pre><code>$ git status
-# On branch master
-nothing to commit (working directory clean)
-</code></pre>
-
-<p>Finally, ask to build the package on a machine running Debian Squeeze (I generally use my SSH config file to handle the SSH connection details for the specified host):</p>
-
-<pre><code>$ HOST=debian-build-machine rake pkgr:build:deb
-</code></pre>
-
-<p>After some time, you should get a final line with the name of your debian package:</p>
-
-<pre><code>[... lots of lines ...]
-my-app_0.1.0-1_amd64.deb
-</code></pre>
-
-<p>Make sure it is really here:</p>
-
-<pre><code>$ ls -l pkg/
-total 12128
--rw-r--r--  1 crohr  staff  6207392 May  4 10:57 my-app_0.1.0-1_amd64.deb
-</code></pre>
-
-<h3 id="use_it">Use it</h3>
-
-<p>Now you can either upload it to an apt repository (if you have one, I&#8217;ll make a tutorial on how to set up a simple one), or just test that the package works by installing it on your build machine (or another one, for that matter, but you&#8217;ll have to manually re-install the dependencies):</p>
-
-<pre><code>$ scp pkg/my-app_0.1.0-1_amd64.deb debian-build-machine:/tmp/
-$ ssh debian-build-machine
-debian-build-machine $ sudo dpkg -i /tmp/my-app_0.1.0-1_amd64.deb
-Selecting previously deselected package my-app.
-(Reading database ... 53073 files and directories currently installed.)
-Unpacking my-app (from /tmp/my-app_0.1.0-1_amd64.deb) ...
-Setting up my-app (0.1.0-1) ...
-Installing new version of config file /etc/my-app/pkgr.yml ...
-Adding system user `my-app' (UID 105) ...
-Adding new group `my-app' (GID 108) ...
-Adding new user `my-app' (UID 105) with group `my-app' ...
-Not creating home directory `/home/my-app'.
-Starting my-app: OK.
-</code></pre>
-
-<p>Make sure your app is running:</p>
-
-<pre><code>debian-build-machine $ ps aux | grep my-app | grep -v grep
-my-app   13928  3.5 10.5 143436 40004 ?        Sl   11:06   0:02 thin server (0.0.0.0:8000) [my-app-0.1.0]
-</code></pre>
-
-<p>Notice how the process name shows the version number? From experience, this is really useful.</p>
-
-<p>Now you can send a first request:</p>
-
-<pre><code>$ curl localhost:8000/
-&lt;!DOCTYPE html&gt;
-&lt;html&gt;
-&lt;head&gt;
-  &lt;title&gt;The page you were looking for doesn't exist (404)&lt;/title&gt;
-  &lt;style type="text/css"&gt;
-    body { background-color: #fff; color: #666; text-align: center; font-family: arial, sans-serif; }
-    div.dialog {
-      width: 25em;
-      padding: 0 4em;
-      margin: 4em auto 0 auto;
-      border: 1px solid #ccc;
-      border-right-color: #999;
-      border-bottom-color: #999;
-    }
-    h1 { font-size: 100%; color: #f00; line-height: 1.5em; }
-  &lt;/style&gt;
-&lt;/head&gt;
-
-&lt;body&gt;
-  &lt;!-- This file lives in public/404.html --&gt;
-  &lt;div class="dialog"&gt;
-    &lt;h1&gt;The page you were looking for doesn't exist.&lt;/h1&gt;
-    &lt;p&gt;You may have mistyped the address or the page may have moved.&lt;/p&gt;
-  &lt;/div&gt;
-&lt;/body&gt;
-&lt;/html&gt;
-</code></pre>
-
-<p>Obviously this app does nothing, so you&#8217;ll get a 404. So go back to building your app, and then just type <code>rake pkgr:bump:patch</code> and <code>HOST=debian-build-machine rake pkgr:build:deb</code> to generate a new package !</p>
-
-<h3 id="release_it_debian">Release it (debian)</h3>
-
-<p>As of 0.2.0, you can now release the latest package on a server, and add it to
-your list of APT sources for easy installation. In the following we&#8217;ll assume
-that you want to serve your packages from a host called <code>apt-server</code>.</p>
-
-<p>Once you&#8217;ve built the package, run the following to upload it to the
-apt-server and generate the manifest:</p>
-
-<pre><code>$ HOST=apt-server rake pkgr:release:deb
-</code></pre>
-
-<p>Note that you need <strong>sudo</strong> privileges for this. If all goes well, you should
-now have a directory named <code>/var/www/my-app</code> on <code>apt-server</code>. The next step is
-to serve this directory over HTTP. Simply enough, install <code>apache2</code> and you&#8217;re
-good to go:</p>
-
-<pre><code>$ ssh apt-server 'sudo apt-get install apache2 -y'
-</code></pre>
-
-<p>Now, on the server on which you want to install the package (let&#8217;s say
-<code>production-server</code>), just add an additional APT source file referencing this
-new APT server:</p>
-
-<pre><code>production-server # cat /etc/apt/sources.list.d/my-app.list
-deb http://apt-server.ltd/my-app /
-</code></pre>
-
-<p>And then:</p>
-
-<pre><code>production-server # apt-get update &amp;&amp; apt-get install my-app
-</code></pre>
-
-<p>Note that you may need to add the following to a
-<code>/etc/apt/apt.conf.d/allow-unauthenticated</code> file if apt complains about
-unauthenticated packages:</p>
-
-<pre><code>production-server # echo 'APT::Get::AllowUnauthenticated "true";' &gt;&gt; /etc/apt/apt.conf.d/allow-unauthenticated
-</code></pre>
-
-<h2 id="general_usage">General usage</h2>
-
-<p>Declare <code>pkgr</code> as one of your dependencies in your <code>Gemfile</code>:</p>
-
-<pre><code>gem 'pkgr'
-</code></pre>
-
-<p>Also add <code>thin</code>:</p>
-
-<pre><code>gem 'thin'
-</code></pre>
-
-<p>Now make sure you have all the gems installed:</p>
-
-<pre><code>bundle install
-</code></pre>
-
-<p><code>pkgr</code> will install a number of new rake tasks to handle the packaging
-workflow. But first, you&#8217;ll have to create a configuration file to get it
-working:</p>
-
-<pre><code>rake pkgr:setup
-</code></pre>
-
-<p>This will create a configuration file at <code>config/pkgr.yml</code>. Edit it, and fill
-in details about the <code>name</code> of your application, description, and the list of
-runtime dependencies it depends on. Same for dependencies required at build
-time only (most of the time, development headers).</p>
-
-<p>Now you can generate all the files required for building a debian package:</p>
-
-<pre><code>rake pkgr:generate
-</code></pre>
-
-<p>A new directory <code>debian/</code> should have been created. You can have a look at it,
-but you should not have to edit anything manually.</p>
-
-<p>Once you&#8217;re ready to package your app, just run the following commands:</p>
-
-<ul>
-<li><p>Commit your changes (the <code>pkgr</code> app will <code>git archive HEAD</code>, which means all
-your changes must be committed first &#8212; we may want to change this):</p>
-
-<pre><code>commit -am "..."
-</code></pre></li>
-<li><p>Increment the version number:</p>
-
-<pre><code>rake pkgr:bump:patch # or rake pkgr:bump:minor or rake pkgr:bump:major
-</code></pre></li>
-<li><p>Build the package on your machine (default, but you better be running a
-Debian Squeeze, and have an SSH server running), or on a remote machine
-(recommended, for instance you can get a Vagrant VM in no time):</p>
-
-<pre><code>HOST=debian-build-machine rake pkgr:build:deb
-# or HOST=localhost rake pkgr:build:deb, or just rake pkgr:build:deb
-</code></pre>
-
-<p>Note that the user with which you&#8217;re connecting to the build machine <strong>must
-have <code>sudo</code> privileges</strong> (required to install build and runtime
-dependencies).</p>
-
-<p>Also, it&#8217;s most likely that you&#8217;ll have to do this a few times at first, as
-well as adding missing runtime and build dependencies, before your app can
-be successfully packaged.</p></li>
-<li><p>Your .deb package should be made available in the <code>pkg</code> directory of your
-app. Next step is probably to upload it to a local apt repository, and then
-a simple <code>apt-get install my-app</code> will install everything. Enjoy!</p></li>
-</ul>
-
-<h2 id="cli_usage">CLI usage</h2>
-
-<p>Starting from version 0.3.0, pkgr now comes with an executable, which allows
-to package any app stored in a git repository with one command.</p>
-
-<p>For instance, here is how you would package the <a href="http://www.redmine.org/">Redmine</a> app:</p>
-
-<pre><code>$ cd /tmp
-$ pkgr --uri https://github.com/edavis10/redmine --ref master --bump 1.4.1 \
-  -c https://raw.github.com/crohr/pkgr/master/examples/redmine/configuration.yml \
-  -c https://raw.github.com/crohr/pkgr/master/examples/redmine/database.yml \
-  -c https://raw.github.com/crohr/pkgr/master/examples/redmine/pkgr.yml \
-  --host debian-build
-</code></pre>
-
-<p>You .deb package will be available in <code>/tmp/redmine/pkg/</code>. In this example,
-the given <code>pkgr.yml</code> configuration file automatically adds a dependency on
-<code>mysql-server</code>, which means that when you install the generated redmine
-package, it will be ready to be accessed on <code>0.0.0.0:8000</code>.</p>
-
-<p>Note that for simple projects, you may not need to specify all those
-configuration files on the command line. Redmine is a complex app.</p>
-
-<p>See <code>pkgr -h</code> for the list of options available:</p>
-
-<pre><code>$ pkgr -h
-* Description
-  pkgr 0.2.0 - Package Rails apps effortlessly.
-* Usage
-  pkgr --uri GIT_REPOSITORY --config database.yml:http://path/to/database.yml --config ...
-
-* Common options
-        --uri=                       Sets the Git repository URI (FILE, HTTP, SSH, GIT, etc.) [required]
-    -c, --config=                    Download a configuration file into the config/ folder of the app (HTTP or FILE URIs)
-    -b, --bump=                      Sets the app version [required]
-    -n, --name=                      Sets the app name [optional]
-        --ref=                       Sets the git reference to checkout [default=master]
-        --host=                      Sets the build machine hostname. If none, the process will stop just before building the package.
-
-* Other
-    -h, --help                       Show this message
-        --version                    Show version
-</code></pre>
-
-<h2 id="notes_of_interest">Notes of interest</h2>
-
-<ul>
-<li><p>your configuration files will be stored in <code>/etc/my-app/*.yml</code>, making it easy to manage with Puppet or manually (don&#8217;t forget to <code>/etc/init.d/my-app restart</code> after making changes).</p></li>
-<li><p>you can change how the Thin server is launched by adding options to the <code>/etc/default/my-app</code> file.</p></li>
-<li><p>your log files will be stored in <code>/var/log/my-app/</code>.</p></li>
-<li><p>your db files will be stored in <code>var/db/my-app/</code>.</p></li>
-<li><p>if you&#8217;ve got migrations to run, just do a <code>my-app rake db:migrate</code> (we might want to run them automatically as part of the postinstall process).</p></li>
-<li><p>you can launch a console using <code>my-app console</code>.</p></li>
-<li><p>use the initd script to start and stop the app: <code>/etc/init.d/my-app [start|stop|restart|status]</code>.</p></li>
-</ul>
-
-<h2 id="todo">Todo</h2>
-
-<ul>
-<li><p>Speed up the packaging process (currently, bundler re-downloads all the gems
-each time you package an app).</p></li>
-<li><p>Include tasks for building RPMs.</p></li>
-<li><p>The included initd script sucks. Improve it.</p></li>
-<li><p>Populate system dependencies based on gems declared in the Gemfile.</p></li>
-<li><p>Some tests.</p></li>
-</ul>
-
 <h2 id="authors">Authors</h2>
-
 <ul>
-<li>Cyril Rohr <a href="&#109;&#97;&#x69;&#x6C;&#x74;&#111;:&#x63;&#x79;&#114;&#105;l&#46;&#114;o&#104;&#114;&#64;&#103;&#109;&#97;&#105;&#108;&#x2E;&#99;&#111;&#109;">&#x63;&#x79;&#114;&#105;l&#46;&#114;o&#104;&#114;&#64;&#103;&#109;&#97;&#105;&#108;&#x2E;&#99;&#111;&#109;</a> - <a href="http://crohr.me">http://crohr.me</a></li>
+<li>Cyril Rohr <script type="text/javascript">
+<!--
+h='&#x67;&#x6d;&#x61;&#x69;&#108;&#46;&#x63;&#x6f;&#x6d;';a='&#64;';n='&#x63;&#x79;&#114;&#x69;&#108;&#46;&#114;&#x6f;&#104;&#114;';e=n+a+h;
+document.write('<a h'+'ref'+'="ma'+'ilto'+':'+e+'">'+'<code>'+e+'</code>'+'<\/'+'a'+'>');
+// -->
+</script><noscript>&#x63;&#x79;&#114;&#x69;&#108;&#46;&#114;&#x6f;&#104;&#114;&#32;&#x61;&#116;&#32;&#x67;&#x6d;&#x61;&#x69;&#108;&#32;&#100;&#x6f;&#116;&#32;&#x63;&#x6f;&#x6d;</noscript> - <a href="http://crohr.me"><code class="url">http://crohr.me</code></a></li>
 </ul>
-
 <h2 id="copyright">Copyright</h2>
-
 <p>See LICENSE (MIT)</p>
 
 
