@@ -46,10 +46,14 @@ module Pkgr
     method_option :version,
       :type => :string,
       :desc => "Package version (if git directory given, it will use the latest git tag available)"
+    method_option :epoch,
+      :type => :string,
+      :default => Time.now.to_i.to_s,
+      :desc => "Package epoch"
     method_option :iteration,
       :type => :string,
-      :default => Time.now.strftime("%Y%m%d%H%M%S"),
-      :desc => "Package iteration (you should keep the default here)"
+      :default => nil,
+      :desc => "Package iteration (defaults to latest git commit sha1, if any)"
     method_option :user,
       :type => :string,
       :desc => "User to run the app under (defaults to your app name)"

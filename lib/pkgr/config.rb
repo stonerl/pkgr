@@ -97,6 +97,7 @@ module Pkgr
         "--user \"#{user}\"",
         "--group \"#{group}\"",
         "--iteration \"#{iteration}\"",
+        "--epoch \"#{epoch}\"",
         "--homepage \"#{homepage}\"",
         "--architecture \"#{architecture}\"",
         "--target \"#{target}\"",

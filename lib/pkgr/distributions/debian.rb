@@ -79,24 +79,29 @@ module Pkgr
       end
 
       def fpm_command(build_dir, config)
-        %{
-          fpm -t deb -s dir  --verbose --force \
-          -C "#{build_dir}" \
-          -n "#{config.name}" \
-          --version "#{config.version}" \
-          --iteration "#{config.iteration}" \
-          --url "#{config.homepage}" \
-          --provides "#{config.name}" \
-          --deb-user "root" \
-          --deb-group "root" \
-          -a "#{config.architecture}" \
-          --description "#{config.description}" \
-          --template-scripts \
-          --before-install #{preinstall_file(config)} \
-          --after-install #{postinstall_file(config)} \
-          #{dependencies(config.dependencies).map{|d| "-d '#{d}'"}.join(" ")} \
-          .
-        }
+        args = [
+          %{-C "#{build_dir}"},
+          %{-n "#{config.name}"},
+          %{--version "#{config.version}"},
+          %{--epoch "#{config.epoch}"},
+          %{--deb-user "root"},
+          %{--deb-group "root"},
+          %{-a "#{config.architecture}"},
+          %{--description "#{config.description}"},
+          %{--template-scripts},
+          %{--before-install #{preinstall_file(config)}},
+          %{--after-install #{postinstall_file(config)}},
+          %{--url "#{config.homepage}"},
+          %{--provides "#{config.name}"}
+        ]
+
+        args.push(%{--iteration "#{config.iteration}"}) if config.iteration
+
+        dependencies(config.dependencies).each do |d|
+          args.push(%{-d "#{d}"})
+        end
+
+        "fpm -t deb -s dir --verbose --force #{args.join(" ")} ."
       end
 
       def buildpacks(config)
