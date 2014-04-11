@@ -36,29 +36,54 @@
 <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script></h1>
 
 <h2 id="goal">Goal</h2>
-<p>Make debian packages out of any app that can run on Heroku.</p>
-<h2 id="examples">Examples</h2>
+
+<p>Make debian packages out of any Ruby or NodeJS app that can run on Heroku. Hosted service available at <a href="https://pkgr.io/">https://pkgr.io/</a>.</p>
+
+<p>More languages and target distributions will be added after thorough testing, though nothing prevents you from specifying a specific buildpack (see Usage).</p>
+
+<h2 id="supporteddistributions64bitsonly">Supported distributions (64bits only)</h2>
+
 <ul>
-<li>Gitlab package for debian wheezy: <a href="http://deb.pkgr.io/crohr/gitlabhq/"><code class="url">http://deb.pkgr.io/crohr/gitlabhq/</code></a>.</li>
+<li>Ubuntu 12.04 (&#8220;Precise&#8221;)</li>
+<li>Debian 7.4 (&#8220;Wheezy&#8221;)</li>
+<li>Ubuntu 10.04 (&#8220;Lucid&#8221;)</li>
+<li>Debian 6 (&#8220;Squeeze&#8221;)</li>
 </ul>
+
+<h2 id="examples">Examples</h2>
+
+<p>See <a href="https://pkgr.io/showcase">https://pkgr.io/showcase</a> for examples of apps packaged with <code>pkgr</code> (Gitlab, Redmine, Discourse, Ghost, etc.).</p>
+
 <h2 id="installation">Installation</h2>
-<p>Note: the new version of pkgr using buildpacks is only available as a pre-release.</p>
-<p>Install <code>pkgr</code> on a Debian/Ubuntu machine (only <code>wheezy</code> flavour for now):</p>
+
+<p>Install <code>pkgr</code> on a debian based build machine:</p>
+
 <pre><code>sudo apt-get install ruby1.9.1-full
-sudo gem install pkgr --version &quot;1.0.1.pre&quot;</code></pre>
+sudo gem install pkgr
+</code></pre>
+
 <h2 id="usage">Usage</h2>
+
 <p>To package your app, you can either execute <code>pkgr</code> locally if your app repository is on the same machine:</p>
-<pre><code>pkgr path/to/app/repo</code></pre>
+
+<pre><code>pkgr package path/to/app/repo
+</code></pre>
+
 <p>Or, assuming your build machine is accessible via SSH by doing <code>ssh pkgr-build-machine</code> (set this in your <code>~/.ssh/config</code> file), you can do as follows:</p>
-<pre><code>pkgr path/to/app/repo --host pkgr-build-machine</code></pre>
+
+<pre><code>pkgr package path/to/app/repo --host pkgr-build-machine
+</code></pre>
+
 <p>The resulting .deb package will be in your current working directory.</p>
+
 <p>Full command line options are given below:</p>
+
 <pre><code>$ pkgr help package
 Usage:
   pkgr package TARBALL
 
 Options:
-  [--target=TARGET]                        # Target package to build (only &#39;deb&#39; supported for now)
+  [--target=TARGET]                        # Target package to build (only 'deb' supported for now)
                                            # Default: deb
   [--changelog=CHANGELOG]                  # Changelog
   [--architecture=ARCHITECTURE]            # Target architecture for the package
@@ -67,7 +92,7 @@ Options:
   [--description=DESCRIPTION]              # Project description
   [--version=VERSION]                      # Package version (if git directory given, it will use the latest git tag available)
   [--iteration=ITERATION]                  # Package iteration (you should keep the default here)
-                                           # Default: 20131007132226
+                                           # Default: 20131016164652
   [--user=USER]                            # User to run the app under (defaults to your app name)
   [--group=GROUP]                          # Group to run the app under (defaults to your app name)
   [--compile-cache-dir=COMPILE_CACHE_DIR]  # Where to store the files cached between packaging runs
@@ -76,44 +101,73 @@ Options:
   [--before-precompile=BEFORE_PRECOMPILE]  # Provide a script to run just before the buildpack compilation
   [--host=HOST]                            # Remote host to build on (default: local machine)
   [--auto]                                 # Automatically attempt to install missing dependencies
+  [--clean]                                # Automatically clean up temporary dirs
+                                           # Default: true
+  [--buildpack=BUILDPACK]                  # Custom buildpack to use
+  [--edge]                                 # Always use the latest version of the buildpack if already installed
+                                           # Default: true
   [--verbose]                              # Run verbosely
   [--debug]                                # Run very verbosely
-  [--name=NAME]                            # Application name (if directory given, it will default to the directory name)</code></pre>
+  [--name=NAME]                            # Application name (if directory given, it will default to the directory name)
+  [--env=&quot;RACK_ENV=staging&quot; ]              # Specify environment variables for buildpack
+</code></pre>
+
 <h2 id="why">Why?</h2>
-<p>Tools such as <a href="http://capify.org/">Capistrano</a> are great for deploying applications, but the deployment recipe can quickly become a mess, and scaling the deployment to more than a few servers can prove to be difficult. Plus, if you're already using automation tools such as <a href="http://www.puppetlabs.com/">Puppet</a> to configure your servers, you have to run two different processes to configure your infrastructure.</p>
-<p><code>pkgr</code> builds on top of the Heroku tools to provide you with an easy way to package you app as a debian package. The great advantage is that once you've built it and you tested that it works once, you can deploy on any number of servers at any time and you're sure that it will just work. Then, you can upgrade/downgrade or uninstall the whole application in one command.</p>
-<p>Finally, it's a great way to share your open source software with your users and clients. Much easier than asking them to install all the dependencies manually! I'm in the process of making sure <code>pkgr</code> is feature complete by trying to package as many successful open-source projects as I can. Don't hesitate to test it on your app and report your findings!</p>
-<h2 id="what-this-does">What this does</h2>
+
+<p>Tools such as <a href="http://capify.org/">Capistrano</a> are great for deploying
+applications, but the deployment recipe can quickly become a mess, and scaling
+the deployment to more than a few servers can prove to be difficult. Plus, if
+you&#8217;re already using automation tools such as
+<a href="http://www.puppetlabs.com/">Puppet</a> to configure your servers, you have to
+run two different processes to configure your infrastructure.</p>
+
+<p><code>pkgr</code> builds on top of the Heroku tools to provide you with an easy way to package you app as a debian package. The great advantage is that once you&#8217;ve built it and you tested that it
+works once, you can deploy on any number of servers at any time and you&#8217;re
+sure that it will just work. Then, you can upgrade/downgrade or uninstall the whole application in one command.</p>
+
+<p>Finally, it&#8217;s a great way to share your open source software with your users and clients. Much easier than asking them to install all the dependencies manually! I&#8217;m in the process of making sure <code>pkgr</code> is feature complete by trying to package as many successful open-source projects as I can. Don&#8217;t hesitate to test it on your app and report your findings!</p>
+
+<h2 id="whatthisdoes">What this does</h2>
+
 <ul>
-<li><p>Uses Heroku buildpacks to embed all your dependencies within the debian package. That way, no need to mess with stale system dependencies, and no need to install anything by hand. Also, we get for free all the hard work done by Heroku developers to make sure your app runs fine in an isolated way.</p></li>
-<li><p>Gives you a nice executable, which closely replicates the Heroku toolbelt utility. For instance, assuming you're packaging an app called <code>my-app</code>, you can do the following:</p>
+<li>Uses Heroku buildpacks to embed all the dependencies related to your application runtime within the debian package. For a Rails app for instance, this means that <code>pkgr</code> will embed the specific ruby runtime you asked for, along with all the gems specified in your Gemfile. However, all other dependencies you may need must be specified as additional system dependencies (see Usage). This avoids the &#8216;packaging-the-world&#8217; approach used by other tools such as omnibus (with the pros and cons that come with it), but it still allows you to use the latest and greatest libraries for your language of choice. See this <a href="http://blog.pkgr.io/post/81988994454/why-i-made-pkgr-io-digressions-on-software-packaging">blog post</a> for more background.</li>
+</ul>
+
+<ul>
+<li><p>Gives you a nice executable, which closely replicates the Heroku toolbelt utility. For instance, assuming you&#8217;re packaging an app called <code>my-app</code>, you can do the following:</p>
+
 <pre><code>my-app config:set VAR=value
 my-app config:get VAR
-my-app run [procfile process] # e.g. my-app run rake db:migrate, my-app run console, etc.
+my-app run [procfile process] # e.g. my-app run rake db:migrate; my-app run console; etc.
+my-app run [arbitrary process] # e.g. my-app run ruby -v; my-app run bundle install; etc.
 my-app scale web=1 worker=1
-...</code></pre></li>
-<li><p>You app will reside in <code>/opt/app-name</code>.</p></li>
-<li><p>You'll also get a upstart based initialization script that you can use directly.</p></li>
+...
+</code></pre></li>
+<li><p>Your app will reside in <code>/opt/app-name</code>.</p></li>
+<li><p>You&#8217;ll also get upstart (or sysvinit) initialization scripts that you can use directly:</p>
+
+<pre><code>service my-app start/stop/restart/status
+</code></pre></li>
 <li><p>Logs will be stored in <code>/var/log/app-name/</code>, with a proper logrotate config automatically added.</p></li>
 <li><p>Config files can be added in <code>/etc/app-name/</code></p></li>
 </ul>
+
 <h2 id="requirements">Requirements</h2>
+
 <ul>
 <li><p>You must have a Procfile.</p></li>
-<li><p>Your application must be Heroku compatible, meaning you should be able to set your main app's configuration via environment variables.</p></li>
+<li><p>Your application must be Heroku compatible, meaning you should be able to set your main app&#8217;s configuration via environment variables.</p></li>
 </ul>
-<h2 id="authors">Authors</h2>
-<ul>
-<li>Cyril Rohr <script type="text/javascript">
-<!--
-h='&#x67;&#x6d;&#x61;&#x69;&#108;&#46;&#x63;&#x6f;&#x6d;';a='&#64;';n='&#x63;&#x79;&#114;&#x69;&#108;&#46;&#114;&#x6f;&#104;&#114;';e=n+a+h;
-document.write('<a h'+'ref'+'="ma'+'ilto'+':'+e+'">'+'<code>'+e+'</code>'+'<\/'+'a'+'>');
-// -->
-</script><noscript>&#x63;&#x79;&#114;&#x69;&#108;&#46;&#114;&#x6f;&#104;&#114;&#32;&#x61;&#116;&#32;&#x67;&#x6d;&#x61;&#x69;&#108;&#32;&#100;&#x6f;&#116;&#32;&#x63;&#x6f;&#x6d;</noscript> - <a href="http://crohr.me"><code class="url">http://crohr.me</code></a></li>
-</ul>
-<h2 id="copyright">Copyright</h2>
-<p>See LICENSE (MIT)</p>
 
+<h2 id="authors">Authors</h2>
+
+<ul>
+<li>Cyril Rohr <a href="&#x6d;&#x61;&#x69;&#108;&#116;&#x6f;&#58;&#x63;&#x79;&#x72;&#x69;&#108;&#x2e;&#114;&#x6f;&#x68;&#x72;&#64;&#x67;&#x6d;&#x61;&#x69;&#x6c;&#46;&#x63;&#111;&#109;">&#x63;&#x79;&#114;&#105;&#108;&#46;&#x72;&#111;&#104;&#x72;&#x40;&#x67;&#109;&#x61;&#105;&#x6c;&#x2e;&#99;&#111;&#x6d;</a> - <a href="http://crohr.me">http://crohr.me</a></li>
+</ul>
+
+<h2 id="copyright">Copyright</h2>
+
+<p>See LICENSE (MIT)</p>
 
       </section>
     </div>
