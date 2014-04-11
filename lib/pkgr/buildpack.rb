@@ -95,6 +95,7 @@ module Pkgr
     end
 
     def replace_app_with_app_home(app_home)
+      return
       Dir.chdir(dir) do
         buildpack_replace = Mixlib::ShellOut.new("find . -type f -print0 | xargs -0 perl -pi -e s,/app,#{app_home},g")
         buildpack_replace.logger = Pkgr.logger

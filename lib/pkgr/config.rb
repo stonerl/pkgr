@@ -48,7 +48,7 @@ module Pkgr
     end
 
     def home
-      "/opt/#{name}"
+      "/opt/#{name}/app"
     end
 
     def user

@@ -55,7 +55,7 @@ describe Pkgr::Config do
     new_config = config.merge(config2)
 
     expect(new_config.name).to eq("some-awesome-app")
-    expect(new_config.home).to eq("/opt/some-awesome-app")
+    expect(new_config.home).to eq("/opt/some-awesome-app/app")
     expect(new_config.version).to eq("0.0.1")
     expect(new_config.user).to eq("git")
     expect(new_config.dependencies).to eq(["dep1", "dep2", "mysql-server", "git-core"])

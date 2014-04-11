@@ -102,7 +102,7 @@ Finally, it's a great way to share your open source software with your users and
         my-app scale web=1 worker=1
         ...
 
-* Your app will reside in `/opt/app-name`.
+* Your app will reside in `/opt/app-name/app`.
 
 * You'll also get upstart (or sysvinit) initialization scripts that you can use directly:
 
