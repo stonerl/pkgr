@@ -1,3 +1,10 @@
 cli: pkgr
+targets:
+  debian-7:
+  debian-8:
+  ubuntu-12.04:
+  ubuntu-14.04:
+  centos-7:
+  centos-8:
 before:
   - cat packaging/shebang bin/pkgr | tee bin/pkgr
